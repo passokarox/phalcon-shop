@@ -1,35 +1,68 @@
 <?php
 
-use Phalcon\Mvc\Application;
-
 error_reporting(E_ALL);
 
-try {
+$di = new \Phalcon\DI\FactoryDefault();
 
-    /**
-     * Include services
-     */
-    require __DIR__ . '/../config/services.php';
+//Registering a router
+$di->set('router', function(){
 
-    /**
-     * Handle the request
-     */
-    $application = new Application();
+	$router = new \Phalcon\Mvc\Router();
 
-    /**
-     * Assign the DI
-     */
-    $application->setDI($di);
+	$router->setDefaultModule("Shop");
 
-    /**
-     * Include modules
-     */
-    require __DIR__ . '/../config/modules.php';
+	$router->add('/:controller/:action', array(
+		'module' => 'Shop',
+		'controller' => 1,
+		'action' => 2,
+	));
 
-    echo $application->handle()->getContent();
+	$router->add("/login", array(
+		'module' => 'Shop',
+		'controller' => 'account\login',
+		'action' => 1,
+	));
 
-} catch (Phalcon\Exception $e) {
-    echo $e->getMessage();
-} catch (PDOException $e) {
-    echo $e->getMessage();
-}
+	$router->add("/admin/products/:action", array(
+		'module' => 'admin',
+		'controller' => 'products',
+		'action' => 1,
+	));
+
+	$router->add("/products/:action", array(
+		'module' => 'Shop',
+		'controller' => 'products',
+		'action' => 1,
+	));
+
+	return $router;
+});
+
+//Registering a shared view component
+$di->set('view', function() {
+	$view = new \Phalcon\Mvc\View();
+	$view->setViewsDir('../apps/common/views/');
+        $view->registerEngines(array(
+                ".volt" => 'Phalcon\Mvc\View\Engine\Volt'
+            ));
+	return $view;
+});
+
+$application = new \Phalcon\Mvc\Application();
+
+//Pass the DI to the application
+$application->setDI($di);
+
+//Register the installed modules
+$application->registerModules(array(
+	'Shop' => array(
+		'className' => 'Multiple\Shop\Module',
+		'path' => '../apps/modules/shop/Module.php'
+	),
+	'Admin' => array(
+		'className' => 'Multiple\Admin\Module',
+		'path' => '../apps/modules/admin/Module.php'
+	)
+));
+
+echo $application->handle()->getContent();
